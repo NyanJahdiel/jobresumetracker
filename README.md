@@ -1,4 +1,4 @@
-# Job Resune Tracker 
+# Job Resume Tracker 
 
 AI Powered job application tracker that uses an LLM to tailor resumes and cover letters per job opening. 
 Built to solve a real problem: manually tailoring application materials for each job posting is repetitive. 
