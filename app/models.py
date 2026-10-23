@@ -22,6 +22,13 @@ class Job(Base):
     __tablename__ = "jobs"
 
     id = Column(Integer, primary_key=True, index=True)
+
+    profile_id = Column(
+        Integer, 
+        ForeignKey("Candidate_profiles.id"),
+        nullable= False
+    )
+
     title = Column(String(255), nullable=False)
     company = Column(String(255), nullable=False)
     posting_text = Column(Text, nullable=False)
@@ -33,6 +40,11 @@ class Job(Base):
     applications = relationship(
         "Application",
         back_populates="job"
+    )
+
+    profile = relationship(
+        "CandidateProfile",
+        back_populates="jobs"
     )
 
 
@@ -138,4 +150,9 @@ class CandidateProfile(Base):
     created_at = Column(
         DateTime,
         server_default=func.now()
+    )
+
+    jobs = relationship(
+    "Job",
+    back_populates="profile"
     )

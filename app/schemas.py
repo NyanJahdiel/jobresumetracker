@@ -18,9 +18,9 @@ class CandidateProfileCreate(BaseModel):
     phone: str | None = None
     location: str | None = None 
 
-    professional_summary = str | None = None
-    skills = str | None = None
-    experience = str | None = None
+    professional_summary : str | None = None
+    skills : str | None = None
+    experience : str | None = None
     education: str | None = None
     projects: str | None = None
     certifications: str | None = None
