@@ -1,5 +1,6 @@
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -7,9 +8,15 @@ from ..models import User, CandidateProfile
 from ..schemas import (
     CandidateProfileCreate,
     CandidateProfileResponse,
-    CandidateProfileUpdate
+    CandidateProfileUpdate,
+    ResumeExtractionResponse
 )
 from .auth import get_current_user
+from ..services.resume_extractor import (
+    MAX_RESUME_BYTES,
+    ResumeExtractionError,
+    extract_resume,
+)
 
 router = APIRouter(
     prefix="/profiles",
@@ -107,4 +114,23 @@ def update_my_profile(
     db.refresh(profile)
 
     return profile
-    
+
+
+@router.post("/me/resume", response_model=ResumeExtractionResponse)
+async def upload_resume(
+    file: UploadFile = File(..., description="PDF or DOCX resume, up to 5 MB"),
+    current_user: User = Depends(get_current_user),
+):
+    """Extract resume text for review; do not save or update the profile."""
+    try:
+        data = await file.read(MAX_RESUME_BYTES + 1)
+    finally:
+        await file.close()
+
+    if len(data) > MAX_RESUME_BYTES:
+        raise HTTPException(status_code=413, detail="Resume exceeds the 5 MB upload limit.")
+
+    try:
+        return await run_in_threadpool(extract_resume, file.filename or "", data)
+    except ResumeExtractionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
