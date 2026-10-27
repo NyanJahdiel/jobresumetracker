@@ -17,7 +17,7 @@ The project began as a job-application tracker. Its focus has since changed: **a
 - Tailor resumes and cover letters **without inventing qualifications**.
 - Let users review, revise, and export tailored documents.
 
-**Important:** The AI-analysis, resume upload, generation, and export features are **planned, not yet implemented**. The repository currently contains a backend foundation.
+**Important:** AI analysis, document generation, and export remain **planned, not implemented**. A deterministic resume preview and explicit profile-confirmation workflow is available. The repository currently contains a backend foundation.
 
 ## Technology stack
 
@@ -44,7 +44,7 @@ The project began as a job-application tracker. Its focus has since changed: **a
 | Candidate profile create/read/update routes | Implemented; testing in progress |
 | User-scoped job create/list/detail routes | Implemented; testing in progress |
 | Cross-account authorization tests | Not yet automated |
-| Authenticated resume upload and PDF/DOCX text preview | Implemented; needs endpoint testing |
+| Authenticated resume upload, section suggestions, and explicit confirmation | Implemented in source; needs local endpoint testing |
 | Job-description analysis and skill-gap matching | Not implemented |
 | AI resume/cover-letter generation | Not implemented |
 | Document versioning/export | Not implemented |
@@ -190,7 +190,7 @@ python -m uvicorn app.main:app --reload
 
 ### Resume upload and text-extraction preview
 
-After authenticating, use `POST /profiles/me/resume` in Swagger UI with a `.pdf` or `.docx` file (maximum **5 MB**). The API returns the filename, file size, extracted text and character count. **The uploaded file and extracted text are not persisted or written into the candidate profile.** Review/edit and explicit save will be added next.
+After authenticating, use `POST /profiles/me/resume` in Swagger UI with a `.pdf` or `.docx` file (maximum **5 MB**). The API returns the filename, file size, extracted text, character count, tentative section suggestions, and any unclassified text. **The uploaded file and extracted text are not persisted or written into the candidate profile during upload.** Headings are matched deterministically; there is no AI interpretation at this stage.
 
 Limits: maximum 30 PDF pages and 100,000 extracted characters. Scanned/image-only PDFs and encrypted documents are not supported. DOCX extraction includes ordinary body paragraphs and tables, but may miss text stored in headers, footers, or complex drawing objects.
 
@@ -199,6 +199,29 @@ Install the additional parser dependencies listed in `requirements.txt`. Run ext
 ```powershell
 python -m pip install pytest
 python -m pytest tests/test_resume_extraction.py -q
+```
+
+### Confirm a reviewed resume
+
+After reading the upload response, the user should edit the suggestions and explicitly POST only the fields they want saved to `/profiles/me/resume/confirm`:
+
+```json
+{
+  "confirmed": true,
+  "fields": {
+    "skills": "Python, FastAPI, SQLAlchemy",
+    "education": "B.Eng. Computer Engineering"
+  }
+}
+```
+
+This requires an existing candidate profile. Omitted fields stay unchanged; a field explicitly set to `null` is cleared. Email, name, account ownership, and other identity fields cannot be modified by this endpoint. The API does not store an uploaded file or a durable preview, and does not verify that the submitted values were present in the uploaded resume—users must review them.
+
+For unit tests:
+
+```powershell
+python -m pip install pytest
+python -m pytest tests/test_resume_extraction.py tests/test_resume_profile_parser.py -q
 ```
 
 ### Example: save a job
