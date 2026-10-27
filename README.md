@@ -44,7 +44,7 @@ The project began as a job-application tracker. Its focus has since changed: **a
 | Candidate profile create/read/update routes | Implemented; testing in progress |
 | User-scoped job create/list/detail routes | Implemented; testing in progress |
 | Cross-account authorization tests | Not yet automated |
-| Resume upload and PDF/DOCX parsing | Not implemented |
+| Authenticated resume upload and PDF/DOCX text preview | Implemented; needs endpoint testing |
 | Job-description analysis and skill-gap matching | Not implemented |
 | AI resume/cover-letter generation | Not implemented |
 | Document versioning/export | Not implemented |
@@ -182,11 +182,24 @@ python -m uvicorn app.main:app --reload
 | `POST` | `/auth/login` | Login using form fields `username` (email) and `password` | No |
 | `GET` | `/auth/me` | Get current account | Bearer JWT |
 | `POST` | `/profiles/me` | Create your profile | Bearer JWT |
-| `GET` | `/profiles/me` | Get your profile | Bearer JWT |
+| `GET` | `/profiles/me` | Get your profile | Bearer JWT |\n| `POST` | `/profiles/me/resume` | Upload a PDF/DOCX and preview extracted text (not saved) | Bearer JWT |
 | `PATCH` | `/profiles/me` | Update your profile | Bearer JWT |
 | `POST` | `/jobs/` | Save a job description | Bearer JWT |
 | `GET` | `/jobs/` | List jobs for your profile | Bearer JWT |
 | `GET` | `/jobs/{job_id}` | Get one of your jobs | Bearer JWT |
+
+### Resume upload and text-extraction preview
+
+After authenticating, use `POST /profiles/me/resume` in Swagger UI with a `.pdf` or `.docx` file (maximum **5 MB**). The API returns the filename, file size, extracted text and character count. **The uploaded file and extracted text are not persisted or written into the candidate profile.** Review/edit and explicit save will be added next.
+
+Limits: maximum 30 PDF pages and 100,000 extracted characters. Scanned/image-only PDFs and encrypted documents are not supported. DOCX extraction includes ordinary body paragraphs and tables, but may miss text stored in headers, footers, or complex drawing objects.
+
+Install the additional parser dependencies listed in `requirements.txt`. Run extraction unit tests with:
+
+```powershell
+python -m pip install pytest
+python -m pytest tests/test_resume_extraction.py -q
+```
 
 ### Example: save a job
 
@@ -210,11 +223,11 @@ The API associates the job with the profile belonging to the authenticated user.
 4. [ ] Add automated authentication and authorization tests, including two-user isolation.
 5. [ ] Resolve legacy tables and enforce non-null ownership constraints.
 6. [ ] Make fresh-database migrations reproducible and synchronize dependencies.
-7. [ ] Upload and parse existing PDF/DOCX resumes.
-8. [ ] Extract job requirements and compare them against verified profile facts.
-9. [ ] Implement LLM-assisted tailoring with human review and no fabricated qualifications.
-10. [ ] Redesign tailoring/document history and support PDF/DOCX export.
-11. [ ] Build a frontend and prepare for deployment.
+7. [x] Implement authenticated PDF/DOCX text extraction preview (local endpoint verification pending).
+8. [ ] Review, confirm and persist extracted resume information before updating a profile.\n9. [ ] Extract job requirements and compare them against verified profile facts.
+10. [ ] Implement LLM-assisted tailoring with human review and no fabricated qualifications.
+11. [ ] Redesign tailoring/document history and support PDF/DOCX export.
+12. [ ] Build a frontend and prepare for deployment.
 
 ## Security and privacy
 
