@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
 
 class JobCreate(BaseModel): 
@@ -62,12 +63,34 @@ class CandidateProfileUpdate(BaseModel):
     certifications: str | None = None
 
 
+class ResumeProfileFields(BaseModel):
+    """Only fields already present in the current CandidateProfile table."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    professional_summary: str | None = Field(default=None, min_length=1, max_length=10000)
+    skills: str | None = Field(default=None, min_length=1, max_length=10000)
+    experience: str | None = Field(default=None, min_length=1, max_length=10000)
+    education: str | None = Field(default=None, min_length=1, max_length=10000)
+    projects: str | None = Field(default=None, min_length=1, max_length=10000)
+    certifications: str | None = Field(default=None, min_length=1, max_length=10000)
+
+
 class ResumeExtractionResponse(BaseModel):
-    """A preview of extracted resume text; nothing is saved automatically."""
+    """Preview only. No profile changes until /resume/confirm."""
 
     filename: str
     file_type: str
     file_size_bytes: int
     character_count: int
     extracted_text: str
+    suggested_fields: ResumeProfileFields
+    unclassified_text: str = ""
     warnings: list[str] = Field(default_factory=list)
+
+
+class ResumeConfirmRequest(BaseModel):
+    """Explicitly confirmed fields after a user has reviewed the preview."""
+
+    confirmed: Literal[True]
+    fields: ResumeProfileFields
