@@ -9,9 +9,11 @@ from ..schemas import (
     CandidateProfileCreate,
     CandidateProfileResponse,
     CandidateProfileUpdate,
-    ResumeExtractionResponse
+    ResumeExtractionResponse,
+    ResumeConfirmRequest
 )
 from .auth import get_current_user
+from ..services.resume_profile_parser import suggest_profile_fields
 from ..services.resume_extractor import (
     MAX_RESUME_BYTES,
     ResumeExtractionError,
@@ -131,6 +133,44 @@ async def upload_resume(
         raise HTTPException(status_code=413, detail="Resume exceeds the 5 MB upload limit.")
 
     try:
-        return await run_in_threadpool(extract_resume, file.filename or "", data)
+        extracted = await run_in_threadpool(extract_resume, file.filename or "", data)
+        suggestions = suggest_profile_fields(extracted["extracted_text"])
+        return {**extracted, **suggestions}
     except ResumeExtractionError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/me/resume/confirm",
+    response_model=CandidateProfileResponse,
+)
+def confirm_resume_profile(
+    data: ResumeConfirmRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Persist only the user-reviewed fields; preserve identity and omitted fields."""
+    profile = db.query(CandidateProfile).filter(
+        CandidateProfile.user_id == current_user.id
+    ).first()
+
+    if profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Create your candidate profile before confirming resume data.",
+        )
+
+    updates = data.fields.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(
+            status_code=422,
+            detail="Select at least one reviewed field to save.",
+        )
+
+    # Explicit null is allowed to clear a section; omitted fields remain unchanged.
+    for field, value in updates.items():
+        setattr(profile, field, value)
+
+    db.commit()
+    db.refresh(profile)
+    return profile
