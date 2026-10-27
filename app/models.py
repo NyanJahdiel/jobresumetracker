@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey, func
+from sqlalchemy import Column, Boolean, Integer, String, Text, Date, DateTime, ForeignKey, func
 from sqlalchemy.orm import relationship
 from .database import Base 
 
@@ -11,12 +11,13 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Boolean,
     func
 )
 from sqlalchemy.orm import relationship
 
 from .database import Base
-
+from sqlalchemy import UniqueConstraint
 
 class Job(Base):
     __tablename__ = "jobs"
@@ -25,8 +26,9 @@ class Job(Base):
 
     profile_id = Column(
         Integer, 
-        ForeignKey("Candidate_profiles.id"),
-        nullable= False
+        ForeignKey("candidate_profiles.id"),
+        nullable= True,
+        index=True
     )
 
     title = Column(String(255), nullable=False)
@@ -155,4 +157,53 @@ class CandidateProfile(Base):
     jobs = relationship(
     "Job",
     back_populates="profile"
+    )
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        unique=True,
+        nullable=True
+    )
+
+    user = relationship(
+        "User",
+        back_populates="profile"
+    )
+    
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(
+        Integer, 
+        primary_key= True, 
+        index= True
+    )
+
+    email = Column(
+        String(255),
+        unique= True,
+        nullable= False,
+        index= True
+    )
+    hashed_password = Column(
+        String(255),
+        nullable=False
+    )
+
+    is_active = Column(
+        Boolean,
+        default=True,
+        nullable=False
+    )
+
+    created_at = Column(
+        DateTime,
+        server_default=func.now(),
+        nullable=False
+    )
+
+    profile = relationship(
+        "CandidateProfile",
+        back_populates="user",
+        uselist=False
     )
