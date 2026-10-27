@@ -60,3 +60,14 @@ class CandidateProfileUpdate(BaseModel):
     education: str | None = None
     projects: str | None = None
     certifications: str | None = None
+
+
+class ResumeExtractionResponse(BaseModel):
+    """A preview of extracted resume text; nothing is saved automatically."""
+
+    filename: str
+    file_type: str
+    file_size_bytes: int
+    character_count: int
+    extracted_text: str
+    warnings: list[str] = Field(default_factory=list)
